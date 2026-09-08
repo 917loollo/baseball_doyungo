@@ -4,8 +4,8 @@ function fetchJson(url) {
   return new Promise((resolve) => {
     const options = {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
-        'Referer': 'https://m.sports.naver.com/kbaseball/index'
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
+        'Accept': 'application/json, text/plain, */*'
       }
     };
     https.get(url, options, (res) => {
@@ -24,88 +24,41 @@ exports.handler = async function(event, context) {
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
   const day = String(now.getUTCDate()).padStart(2, '0');
 
-  // 1. 경기 라이브 일정 API
-  const gameUrl = `https://api-gw.sports.naver.com/schedule/games?gameType=KBO&date=${year}-${month}-${day}`;
-  // 2. 팀 순위 API
-  const rankUrl = `https://api-gw.sports.naver.com/record/kbo/team?season=${year}`;
-  // 3. 개인 기록 순위 API (타자/투수)
-  const hitterUrl = `https://api-gw.sports.naver.com/record/kbo/individual/hitter?season=${year}&sort=AVG`;
-  const pitcherUrl = `https://api-gw.sports.naver.com/record/kbo/individual/pitcher?season=${year}&sort=ERA`;
+  // KBO 공식 데이터 서비스 모바일 API
+  const kboDataUrl = `https://m.koreabaseball.com/ws/Main.asmx/GetScheduleList?leId=1&srId=0,1,3,4,5,7,8,9&date=${year}${month}${day}`;
+  const json = await fetchJson(kboDataUrl);
 
-  const [gameRes, rankRes, hitterRes, pitcherRes] = await Promise.all([
-    fetchJson(gameUrl),
-    fetchJson(rankUrl),
-    fetchJson(hitterUrl),
-    fetchJson(pitcherUrl)
-  ]);
+  const rawList = json?.rows || json?.data || [];
 
-  const rawGames = gameRes?.result?.games || gameRes?.games || [];
-
-  const games = rawGames.map(g => {
-    const away = g.awayTeam || {};
-    const home = g.homeTeam || {};
-    const detail = g.baseballMatchDetails || {};
+  const games = rawList.map(g => {
+    const awayName = g.AWAY_NM || g.awayTeamName || '원정';
+    const homeName = g.HOME_NM || g.homeTeamName || '홈';
+    const awayScore = g.T_SCORE_CN ?? g.awayScore ?? '-';
+    const homeScore = g.B_SCORE_CN ?? g.homeScore ?? '-';
 
     return {
-      GAME_ID: g.gameId || '',
-      G_TM: g.gameTime || '18:30',
-      S_NM: g.stadium || '구장',
-      GAME_STATE_SC: g.status || g.gameStatusCode || 'SCHEDULED',
-      AWAY_NM: away.name || g.awayTeamName || '원정',
-      HOME_NM: home.name || g.homeTeamName || '홈',
-      T_SCORE_CN: away.score ?? '-',
-      B_SCORE_CN: home.score ?? '-',
-      GAME_INN_NO: detail.currentInning ? `${detail.currentInning}회` : (g.currentInning ? `${g.currentInning}회` : ''),
-      GAME_TB_SC_NM: detail.inningStatus || g.inningStatus || '',
-      PITCHER: {
-        name: detail.currentPitcher?.name || away.starter || home.starter || '-',
-        record: detail.currentPitcher?.stat || '투수 정보'
-      },
-      BATTER: {
-        name: detail.currentBatter?.name || '-',
-        record: detail.currentBatter?.stat || '타자 정보'
-      },
+      GAME_ID: g.GAME_ID || '',
+      G_TM: g.G_TM || '18:30',
+      S_NM: g.S_NM || '구장',
+      GAME_STATE_SC: g.GAME_STATE_SC || 'SCHEDULED',
+      AWAY_NM: awayName,
+      HOME_NM: homeName,
+      T_SCORE_CN: awayScore,
+      B_SCORE_CN: homeScore,
+      GAME_INN_NO: g.GAME_INN_NO ? `${g.GAME_INN_NO}회` : '',
+      GAME_TB_SC_NM: g.GAME_TB_SC_NM || '',
+      PITCHER: { name: g.T_P_NM || g.awayPitcher || '-', record: '투수 기록' },
+      BATTER: { name: g.B_P_NM || g.homeBatter || '-', record: '타자 기록' },
       RUNNERS: {
-        base1: !!(detail.runners && detail.runners.base1),
-        base2: !!(detail.runners && detail.runners.base2),
-        base3: !!(detail.runners && detail.runners.base3)
+        base1: g.B1_BAT_ORDER_NO ? true : false,
+        base2: g.B2_BAT_ORDER_NO ? true : false,
+        base3: g.B3_BAT_ORDER_NO ? true : false
       },
-      BALL_CN: detail.balls ?? 0,
-      STRIKE_CN: detail.strikes ?? 0,
-      OUT_CN: detail.outs ?? 0
+      BALL_CN: g.BALL_CN || 0,
+      STRIKE_CN: g.STRIKE_CN || 0,
+      OUT_CN: g.OUT_CN || 0
     };
   });
-
-  // 팀 순위 파싱
-  const teams = (rankRes?.result?.teamRecords || rankRes?.records || []).map((t, i) => ({
-    rank: t.rank || i + 1,
-    team: t.teamName || t.name || '-',
-    games: t.gameCount || t.games || 0,
-    win: t.win || 0,
-    loss: t.loss || 0,
-    draw: t.draw || 0,
-    pct: t.wra || t.winRate || '0.000',
-    diff: t.gameBehind || '0.0'
-  }));
-
-  // 개인 순위 파싱 (타자 / 투수)
-  const hitters = (hitterRes?.result?.hitterRecords || hitterRes?.records || []).slice(0, 10).map((h, i) => ({
-    rank: i + 1,
-    name: h.playerName || h.name || '-',
-    team: h.teamName || h.team || '-',
-    avg: h.wra || h.avg || '0.000',
-    hits: h.hit || 0,
-    hr: h.hr || 0
-  }));
-
-  const pitchers = (pitcherRes?.result?.pitcherRecords || pitcherRes?.records || []).slice(0, 10).map((p, i) => ({
-    rank: i + 1,
-    name: p.playerName || p.name || '-',
-    team: p.teamName || p.team || '-',
-    era: p.era || '0.00',
-    win: p.win || 0,
-    SO: p.kk || p.so || 0
-  }));
 
   return {
     statusCode: 200,
@@ -115,8 +68,6 @@ exports.handler = async function(event, context) {
     },
     body: JSON.stringify({
       d: games,
-      teams: teams,
-      players: { hitters, pitchers },
       date: `${year}.${month}.${day}`
     })
   };
