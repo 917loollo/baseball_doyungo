@@ -4,7 +4,7 @@ function fetchJson(url) {
   return new Promise((resolve) => {
     const options = {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
         'Referer': 'https://m.sports.naver.com/'
       }
     };
@@ -23,17 +23,22 @@ exports.handler = async function(event, context) {
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
   const day = String(now.getUTCDate()).padStart(2, '0');
-  const dateStr = `${year}${month}${day}`;
 
   const url = `https://api-gw.sports.naver.com/schedule/games?gameType=KBO&date=${year}-${month}-${day}`;
   const json = await fetchJson(url);
 
   const rawGames = json?.result?.games || json?.games || [];
 
-  // KBO 리그 정규/시범/포스트시즌 경기만 엄격히 필터링
+  // 순수 KBO 1군 리그 경기만 엄격하게 추출
   const kboGames = rawGames.filter(g => {
-    const category = (g.categoryName || g.leagueName || 'KBO').toUpperCase();
-    return category.includes('KBO') || category.includes('한국야구');
+    const category = (g.categoryName || g.leagueName || g.gameType || '').toUpperCase();
+    const title = (g.title || '').toUpperCase();
+    
+    // MLB, NPB, 해외야구 등 타 리그 명시 항목 완벽 제외
+    if (category.includes('MLB') || category.includes('NPB') || category.includes('WBC')) return false;
+    
+    // KBO 관련 키워드가 있거나 기본 KBO 연동 데이터만 통과
+    return category.includes('KBO') || category.includes('한국야구') || category === '' || title.includes('KBO');
   });
 
   const games = kboGames.map(g => ({
@@ -46,7 +51,7 @@ exports.handler = async function(event, context) {
     HOME_NM: g.homeTeamName || g.homeTeam?.name || '홈',
     T_SCORE_CN: g.awayTeamScore ?? g.awayTeam?.score ?? '-',
     B_SCORE_CN: g.homeTeamScore ?? g.homeTeam?.score ?? '-',
-    GAME_INN_NO: g.currentInning || '',
+    GAME_INN_NO: g.currentInning || g.inning || '',
     GAME_TB_SC_NM: g.inningStatus || '',
     T_P_NM: g.awayStarter || g.awayTeam?.starter || '-',
     B_P_NM: g.homeStarter || g.homeTeam?.starter || '-',
@@ -54,13 +59,7 @@ exports.handler = async function(event, context) {
     B_PIT_P_NM: g.homePitcher || '-',
     BALL_CN: g.b || 0,
     STRIKE_CN: g.s || 0,
-    OUT_CN: g.o || 0,
-    // 상세 페이지용 이닝별 스코어 배열
-    INNINGS: g.scores || [
-      { inn: 1, a: 0, h: 0 }, { inn: 2, a: 0, h: 0 }, { inn: 3, a: 0, h: 0 },
-      { inn: 4, a: 0, h: 0 }, { inn: 5, a: 0, h: 0 }, { inn: 6, a: 0, h: 0 },
-      { inn: 7, a: 0, h: 0 }, { inn: 8, a: 0, h: 0 }, { inn: 9, a: 0, h: 0 }
-    ]
+    OUT_CN: g.o || 0
   }));
 
   return {
