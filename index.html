@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1677ff"><title>KBO Realtime Live</title>
+<meta name="theme-color" content="#1677ff"><title>KBO Live App</title>
 <style>
 *{box-sizing:border-box}html{background:#f2f2f7}body{margin:0;color:#17171a;font-family:-apple-system,BlinkMacSystemFont,"Pretendard",sans-serif;background:#f2f2f7;min-height:100vh}
 header{position:sticky;top:0;z-index:20;background:#ffffffd9;backdrop-filter:blur(20px);border-bottom:1px solid #e5e5ea}
@@ -19,7 +19,7 @@ main{max-width:800px;margin:auto;padding:16px 16px 60px}
 .team-name{font-size:20px;font-weight:800}.score-box{font-size:32px;font-weight:900;letter-spacing:-1px}
 .inning-text{font-size:12px;color:#ff3b30;font-weight:700;margin-top:2px}
 
-/* 그래픽 야구장 */
+/* 그래픽 야구장 모달 */
 .modal-bg{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);z-index:100;display:none;align-items:center;justify-content:center}
 .modal{background:#fff;width:92%;max-width:500px;border-radius:28px;padding:20px;max-height:90vh;overflow-y:auto;position:relative}
 .close-btn{position:absolute;top:16px;right:16px;border:none;background:#f2f2f7;border-radius:50%;width:30px;height:30px;font-weight:bold;cursor:pointer}
@@ -48,26 +48,26 @@ main{max-width:800px;margin:auto;padding:16px 16px 60px}
 
 <main>
   <section id="sec-games" class="tab-content active">
-    <div id="games-list" class="grid"><div style="text-align:center;padding:40px;color:#888">실시간 데이터 수신 중…</div></div>
+    <div id="games-list" class="grid"><div style="text-align:center;padding:40px;color:#888">데이터 수신 중…</div></div>
   </section>
 
   <section id="sec-teams" class="tab-content">
     <table class="rank-table">
-      <thead><tr><th>순위</th><th>팀</th><th>경기</th><th>승</th><th>패</th><th>무</th><th>승률</th><th>차</th></tr></thead>
+      <thead><tr><th>순위</th><th>팀</th><th>경기</th><th>승</th><th>패</th><th>무</th><th>승률</th></tr></thead>
       <tbody id="team-rank-body"></tbody>
     </table>
   </section>
 
   <section id="sec-players" class="tab-content">
-    <h3 style="margin:10px 0 8px">타율 TOP 10</h3>
+    <h3 style="margin:10px 0 8px">타율 TOP 5</h3>
     <table class="rank-table" style="margin-bottom:20px">
-      <thead><tr><th>순위</th><th>선수</th><th>팀</th><th>타율</th><th>안타</th><th>홈런</th></tr></thead>
+      <thead><tr><th>순위</th><th>선수</th><th>팀</th><th>타율</th><th>안타</th></tr></thead>
       <tbody id="hitter-rank-body"></tbody>
     </table>
 
-    <h3 style="margin:10px 0 8px">평균자책점 TOP 10</h3>
+    <h3 style="margin:10px 0 8px">평균자책점 TOP 5</h3>
     <table class="rank-table">
-      <thead><tr><th>순위</th><th>선수</th><th>팀</th><th>ERA</th><th>승</th><th>탈삼진</th></tr></thead>
+      <thead><tr><th>순위</th><th>선수</th><th>팀</th><th>ERA</th><th>승</th></tr></thead>
       <tbody id="pitcher-rank-body"></tbody>
     </table>
   </section>
@@ -112,10 +112,10 @@ function openM(idx){
     </div>
 
     <div class="player-info-box">
-      <b>투수:</b> ${g.PITCHER.name} <span style="color:#666;font-size:11px">(${g.PITCHER.record})</span>
+      <b>투수:</b> ${g.PITCHER.name}
     </div>
     <div class="player-info-box">
-      <b>타자:</b> ${g.BATTER.name} <span style="color:#666;font-size:11px">(${g.BATTER.record})</span>
+      <b>타자:</b> ${g.BATTER.name}
     </div>
     <div class="player-info-box" style="text-align:center;font-weight:bold">
       <span style="color:#2db7f5">B ${g.BALL_CN}</span> &nbsp;|&nbsp; 
@@ -133,7 +133,6 @@ async function load(){
     let res = await fetch('/api/kbo', { cache: 'no-store' });
     stateData = await res.json();
     
-    // 경기 리스트
     const gamesArr = stateData.d || [];
     document.getElementById('games-list').innerHTML = gamesArr.length ? gamesArr.map((g, i) => `
       <div class="card" onclick="openM(${i})">
@@ -143,30 +142,15 @@ async function load(){
           <div><div class="score-box">${g.T_SCORE_CN} : ${g.B_SCORE_CN}</div><div class="inning-text">${g.GAME_INN_NO} ${g.GAME_TB_SC_NM}</div></div>
           <div class="team-name">${g.HOME_NM}</div>
         </div>
-        <div style="font-size:12px;color:#666;text-align:center">투수: ${g.PITCHER.name} | 타자: ${g.BATTER.name}</div>
+        <div style="font-size:12px;color:#666;text-align:center">선발: ${g.PITCHER.name} vs ${g.BATTER.name}</div>
       </div>
     `).join('') : '<div style="text-align:center;padding:40px;color:#888">오늘 진행되는 KBO 경기가 없습니다.</div>';
-
-    // 팀 순위
-    document.getElementById('team-rank-body').innerHTML = (stateData.teams || []).map(t => `
-      <tr><td><b>${t.rank}</b></td><td>${t.team}</td><td>${t.games}</td><td>${t.win}</td><td>${t.loss}</td><td>${t.draw}</td><td>${t.pct}</td><td>${t.diff}</td></tr>
-    `).join('');
-
-    // 타자 순위
-    document.getElementById('hitter-rank-body').innerHTML = (stateData.players?.hitters || []).map(h => `
-      <tr><td><b>${h.rank}</b></td><td>${h.name}</td><td>${h.team}</td><td>${h.avg}</td><td>${h.hits}</td><td>${h.hr}</td></tr>
-    `).join('');
-
-    // 투수 순위
-    document.getElementById('pitcher-rank-body').innerHTML = (stateData.players?.pitchers || []).map(p => `
-      <tr><td><b>${p.rank}</b></td><td>${p.name}</td><td>${p.team}</td><td>${p.era}</td><td>${p.win}</td><td>${p.SO}</td></tr>
-    `).join('');
 
   }catch(e){}
 }
 
 load();
-setInterval(load, 5000); // 5초마다 실시간 갱신
+setInterval(load, 10000);
 </script>
 </body>
 </html>
