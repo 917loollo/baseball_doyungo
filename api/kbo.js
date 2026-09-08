@@ -29,38 +29,44 @@ exports.handler = async function(event, context) {
 
   const rawGames = json?.result?.games || json?.games || [];
 
-  // 순수 KBO 1군 리그 경기만 엄격하게 추출
-  const kboGames = rawGames.filter(g => {
-    const category = (g.categoryName || g.leagueName || g.gameType || '').toUpperCase();
-    const title = (g.title || '').toUpperCase();
-    
-    // MLB, NPB, 해외야구 등 타 리그 명시 항목 완벽 제외
-    if (category.includes('MLB') || category.includes('NPB') || category.includes('WBC')) return false;
-    
-    // KBO 관련 키워드가 있거나 기본 KBO 연동 데이터만 통과
-    return category.includes('KBO') || category.includes('한국야구') || category === '' || title.includes('KBO');
-  });
+  const games = rawGames.map(g => {
+    // 팀명 파싱 (객체 형태 또는 문자열 형태 모두 대응)
+    const awayName = g.awayTeam?.name || g.awayTeamName || g.aName || '원정';
+    const homeName = g.homeTeam?.name || g.homeTeamName || g.hName || '홈';
 
-  const games = kboGames.map(g => ({
-    GAME_ID: g.gameId || '',
-    G_TM: g.gameTime || '18:30',
-    S_NM: g.stadium || '구장 미정',
-    GAME_STATE_SC: g.gameStatusCode || g.status || 'SCHEDULED',
-    CANCEL_SC_ID: g.cancel || false,
-    AWAY_NM: g.awayTeamName || g.awayTeam?.name || '원정',
-    HOME_NM: g.homeTeamName || g.homeTeam?.name || '홈',
-    T_SCORE_CN: g.awayTeamScore ?? g.awayTeam?.score ?? '-',
-    B_SCORE_CN: g.homeTeamScore ?? g.homeTeam?.score ?? '-',
-    GAME_INN_NO: g.currentInning || g.inning || '',
-    GAME_TB_SC_NM: g.inningStatus || '',
-    T_P_NM: g.awayStarter || g.awayTeam?.starter || '-',
-    B_P_NM: g.homeStarter || g.homeTeam?.starter || '-',
-    T_PIT_P_NM: g.awayPitcher || '-',
-    B_PIT_P_NM: g.homePitcher || '-',
-    BALL_CN: g.b || 0,
-    STRIKE_CN: g.s || 0,
-    OUT_CN: g.o || 0
-  }));
+    // 점수 파싱
+    const awayScore = g.awayTeam?.score ?? g.awayTeamScore ?? g.aScore ?? '-';
+    const homeScore = g.homeTeam?.score ?? g.homeTeamScore ?? g.hScore ?? '-';
+
+    // 경기 상태 및 구장
+    const status = g.status || g.gameStatusCode || g.statusCode || 'SCHEDULED';
+    const stadium = g.stadium || g.venueDetails?.name || '구장';
+    const gameTime = g.gameTime || (g.startTimeUserTimezone ? g.startTimeUserTimezone.substring(11, 16) : '18:30');
+
+    // 이닝 및 상세 상태
+    const matchDetails = g.baseballMatchDetails || {};
+    const inning = matchDetails.currentInning || g.currentInning || '';
+    const inningStatus = matchDetails.inningStatus || g.inningStatus || '';
+
+    return {
+      GAME_ID: g.gameId || '',
+      G_TM: gameTime,
+      S_NM: stadium,
+      GAME_STATE_SC: status,
+      CANCEL_SC_ID: status === 'CANCEL' || status === 'POSTPONED' || g.cancel,
+      AWAY_NM: awayName,
+      HOME_NM: homeName,
+      T_SCORE_CN: awayScore,
+      B_SCORE_CN: homeScore,
+      GAME_INN_NO: inning ? `${inning}회` : '',
+      GAME_TB_SC_NM: inningStatus,
+      T_P_NM: g.awayStarter || g.awayTeam?.starter || '-',
+      B_P_NM: g.homeStarter || g.homeTeam?.starter || '-',
+      BALL_CN: matchDetails.balls || 0,
+      STRIKE_CN: matchDetails.strikes || 0,
+      OUT_CN: matchDetails.outs || 0
+    };
+  });
 
   return {
     statusCode: 200,
