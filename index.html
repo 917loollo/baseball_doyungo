@@ -4,88 +4,122 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f2f2f7"><title>KBO Live — iOS 27</title>
 <style>
-*{box-sizing:border-box}html{background:#f2f2f7}body{margin:0;color:#17171a;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Pretendard",sans-serif;background:
-radial-gradient(circle at 15% 0%,#fff 0 18%,transparent 42%),
-radial-gradient(circle at 100% 20%,#dce8ff 0,transparent 34%),#f2f2f7;min-height:100vh}
+*{box-sizing:border-box}html{background:#f2f2f7}body{margin:0;color:#17171a;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Pretendard",sans-serif;background:radial-gradient(circle at 15% 0%,#fff 0 18%,transparent 42%),radial-gradient(circle at 100% 20%,#dce8ff 0,transparent 34%),#f2f2f7;min-height:100vh}
 header{position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top);background:#f8f8f8c9;backdrop-filter:blur(30px) saturate(180%);border-bottom:1px solid #ffffffaa}
 .nav{height:64px;max-width:1120px;margin:auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between}.brand{font-weight:800;font-size:21px;letter-spacing:-.5px}.brand span{color:#1677ff}
-.navlinks{display:flex;gap:6px;overflow-x:auto}.navlinks a,.navlinks button{padding:8px 12px;border-radius:16px;border:none;background:transparent;text-decoration:none;color:#555;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.navlinks{display:flex;gap:6px}.navlinks button{padding:8px 12px;border-radius:16px;border:none;background:transparent;color:#555;font-size:13px;font-weight:600;cursor:pointer}
 .navlinks button.active{background:#fff;color:#1677ff;box-shadow:0 3px 14px #00000010}
 main{max-width:1120px;margin:auto;padding:28px 20px 60px}.hero{display:flex;justify-content:space-between;align-items:end;margin:8px 0 22px}.eyebrow{font-size:13px;font-weight:700;color:#1677ff;margin-bottom:7px}.hero h1{font-size:36px;line-height:1;margin:0;letter-spacing:-1.5px}.hero p{color:#777;margin:10px 0 0;font-size:14px}.connection{padding:10px 14px;border-radius:20px;background:#ffffffa8;backdrop-filter:blur(20px);box-shadow:0 6px 25px #0000000b;font-size:12px;color:#666}.green{display:inline-block;width:7px;height:7px;border-radius:50%;background:#34c759;margin-right:6px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
-.card{background:#ffffffb8;border:1px solid #ffffffdd;border-radius:28px;padding:20px;box-shadow:0 14px 40px #0000000c,0 1px 3px #0000000a;backdrop-filter:blur(28px) saturate(150%);overflow:hidden;cursor:pointer;transition:transform .15s ease}
+.card{background:#ffffffb8;border:1px solid #ffffffdd;border-radius:28px;padding:20px;box-shadow:0 14px 40px #0000000c,0 1px 3px #0000000a;backdrop-filter:blur(28px) saturate(150%);cursor:pointer;transition:transform .15s ease}
 .card:hover{transform:translateY(-2px)}
 .head{display:flex;justify-content:space-between;align-items:center;color:#85858b;font-size:12px}.live{color:#ff3b30;font-weight:800}.teams{display:grid;grid-template-columns:1fr 110px 1fr;align-items:center;margin:25px 0 20px}.team{text-align:center;font-size:18px;font-weight:750;letter-spacing:-.5px}.score{text-align:center;font-size:38px;font-weight:850;letter-spacing:-2px}.inning{text-align:center;color:#888;font-size:12px;margin-top:3px}.sub{color:#777;text-align:center;font-size:12px;margin-bottom:17px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#f2f2f7b8;border-radius:17px;padding:11px;text-align:center;color:#777;font-size:11px}.stat b{display:block;color:#17171a;font-size:16px;margin-top:3px}.empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:#777}
-.iframe-container{width:100%;height:750px;border-radius:24px;overflow:hidden;background:#fff;box-shadow:0 10px 30px #0000000d;border:1px solid #ffffffdd}
-iframe{width:100%;height:100%;border:none}
-footer{text-align:center;color:#999;font-size:11px;padding:0 20px 35px}
-@media(max-width:700px){.nav{height:auto;padding:12px 16px}.hero{align-items:flex-start;gap:16px;flex-direction:column}.hero h1{font-size:30px}.grid{grid-template-columns:1fr}.teams{grid-template-columns:1fr 90px 1fr}.team{font-size:16px}.score{font-size:32px}.iframe-container{height:600px}}
+
+/* 자체 상세 페이지 모달 CSS */
+.modal-backdrop{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);backdrop-filter:blur(10px);z-index:100;display:none;align-items:center;justify-content:center}
+.modal{background:#fff;width:90%;max-width:540px;border-radius:32px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;position:relative}
+.modal-close{position:absolute;top:20px;right:20px;background:#f2f2f7;border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;font-weight:bold}
+.scoreboard-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:12px;text-align:center}
+.scoreboard-table th,.scoreboard-table td{padding:8px 4px;border-bottom:1px solid #eee}
+.scoreboard-table th{background:#f9f9fb;color:#666}
+.detail-header{background:linear-gradient(135deg,#1677ff,#0050b3);color:#fff;border-radius:20px;padding:20px;text-align:center;margin-top:10px}
+.detail-teams{display:flex;justify-content:space-around;align-items:center;margin-top:10px}
+.detail-score{font-size:36px;font-weight:900}
+
+footer{text-align:center;color:#999;font-size:11px;padding:0 20px 35px;margin-top:40px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.hero h1{font-size:30px}}
 </style>
 </head>
 <body>
 <header><div class="nav"><div class="brand">KBO <span>Live</span></div><div class="navlinks">
-<button id="btn-games" class="active" onclick="switchTab('games')">경기</button>
-<button id="btn-team" onclick="switchTab('team')">팀 순위</button>
-<button id="btn-pitcher" onclick="switchTab('pitcher')">투수 순위</button>
-<button id="btn-hitter" onclick="switchTab('hitter')">타자 순위</button>
+<button class="active">경기 목록</button>
 </div></div></header>
 
 <main>
 <section class="hero">
-<div><div class="eyebrow" id="section-eyebrow">KBO LEAGUE</div><h1 id="section-title">오늘의 경기</h1><p id="date">실시간 데이터를 불러오는 중…</p></div>
+<div><div class="eyebrow">KBO LEAGUE ONLY</div><h1>오늘의 KBO 경기</h1><p id="date">실시간 데이터를 불러오는 중…</p></div>
 <div class="connection"><span class="green"></span><span id="status">연결 중</span></div>
 </section>
 
-<!-- 경기 카드 영역 -->
-<section id="tab-games" class="grid"><div class="card empty">KBO 공식 데이터를 불러오는 중…</div></section>
-
-<!-- 외부 순위 연동 영역 -->
-<section id="tab-rank" style="display:none;">
-  <div class="iframe-container">
-    <iframe id="rank-frame" src=""></iframe>
-  </div>
-</section>
+<section id="games" class="grid"><div class="card empty">KBO 경기를 불러오는 중…</div></section>
 </main>
 
-<footer>KBO 공식 경기 및 순위 데이터 · NAVER Sports 연동</footer>
+<!-- 상세 정보 모달 -->
+<div id="detail-modal" class="modal-backdrop" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<footer>KBO League Live Scoreboard</footer>
 
 <script>
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-
-const rankUrls = {
-  team: 'https://m.sports.naver.com/kbaseball/record/index?category=kbo&tab=team',
-  pitcher: 'https://m.sports.naver.com/kbaseball/record/index?category=kbo&tab=pitcher',
-  hitter: 'https://m.sports.naver.com/kbaseball/record/index?category=kbo&tab=hitter'
-};
-
-function switchTab(tab) {
-  document.querySelectorAll('.navlinks button').forEach(b=>b.classList.remove('active'));
-  
-  if(tab === 'games') {
-    $('#btn-games').classList.add('active');
-    $('#tab-games').style.display = 'grid';
-    $('#tab-rank').style.display = 'none';
-    $('#section-title').textContent = '오늘의 경기';
-    $('#section-eyebrow').textContent = 'KBO LEAGUE';
-  } else {
-    $(`#btn-${tab}`).classList.add('active');
-    $('#tab-games').style.display = 'none';
-    $('#tab-rank').style.display = 'block';
-    $('#rank-frame').src = rankUrls[tab];
-    
-    const titles = { team: '팀 순위', pitcher: '투수 순위', hitter: '타자 순위' };
-    $('#section-title').textContent = titles[tab];
-    $('#section-eyebrow').textContent = 'RECORD & RANKING';
-  }
-}
+let globalGames = [];
 
 function state(g){let s=String(g.GAME_STATE_SC||"").toUpperCase();if(s.includes("CANCEL")||g.CANCEL_SC_ID)return"취소";if(s.includes("END")||s.includes("종료"))return"종료";if(s.includes("PLAY")||s.includes("진행")||s.includes("LIVE"))return"LIVE";return s||"예정"}
-function card(g){
+
+function card(g, idx){
   let st=state(g),inn=[g.GAME_INN_NO,g.GAME_TB_SC_NM].filter(Boolean).join(" ");
-  let gameUrl = g.GAME_ID ? `https://m.sports.naver.com/game/${g.GAME_ID}/relay` : `https://m.sports.naver.com/kbaseball/index`;
-  return `<article class="card" onclick="window.open('${gameUrl}', '_blank')"><div class="head"><span>${esc(g.G_TM)} · ${esc(g.S_NM)}</span><span class="${st==="LIVE"?"live":""}">${esc(st)}</span></div><div class="teams"><div class="team">${esc(g.AWAY_NM)}</div><div><div class="score">${esc(g.T_SCORE_CN??"-")} : ${esc(g.B_SCORE_CN??"-")}</div><div class="inning">${esc(inn)}</div></div><div class="team">${esc(g.HOME_NM)}</div></div><div class="sub">타자 ${esc(g.T_P_NM||g.B_P_NM||"-")} · 투수 ${esc(g.T_PIT_P_NM||g.B_PIT_P_NM||"-")}</div><div class="stats"><div class="stat">볼<b>${esc(g.BALL_CN??"-")}</b></div><div class="stat">스트라이크<b>${esc(g.STRIKE_CN??"-")}</b></div><div class="stat">아웃<b>${esc(g.OUT_CN??"-")}</b></div></div></article>`
+  return `<article class="card" onclick="openDetail(${idx})"><div class="head"><span>${esc(g.G_TM)} · ${esc(g.S_NM)}</span><span class="${st==="LIVE"?"live":""}">${esc(st)}</span></div><div class="teams"><div class="team">${esc(g.AWAY_NM)}</div><div><div class="score">${esc(g.T_SCORE_CN??"-")} : ${esc(g.B_SCORE_CN??"-")}</div><div class="inning">${esc(inn)}</div></div><div class="team">${esc(g.HOME_NM)}</div></div><div class="sub">선발: ${esc(g.T_P_NM)} vs ${esc(g.B_P_NM)}</div><div class="stats"><div class="stat">볼<b>${esc(g.BALL_CN)}</b></div><div class="stat">스트라이크<b>${esc(g.STRIKE_CN)}</b></div><div class="stat">아웃<b>${esc(g.OUT_CN)}</b></div></div></article>`;
 }
 
-async function load(){try{let r=await fetch("/api/kbo",{cache:"no-store"});if(!r.ok)throw Error();let j=await r.json(),rows=j.d||[];$("#tab-games").innerHTML=rows.length?rows.map(card).join(""):'<div class="card empty">오늘은 KBO 경기가 없습니다.</div>';$("#date").textContent=j.date+" · KBO 공식 데이터";$("#status").textContent="실시간 연결 · "+new Date().toLocaleTimeString("ko-KR")}catch(e){$("#status").textContent="재연결 중";$("#tab-games").innerHTML='<div class="card empty">실시간 데이터를 불러오지 못했습니다.<br>잠시 후 다시 시도합니다.</div>'}}load();setInterval(load,10000);
+function openDetail(idx){
+  const g = globalGames[idx];
+  if(!g) return;
+  
+  let innTh = '', awayTd = '', homeTd = '';
+  for(let i=1; i<=9; i++){
+    innTh += `<th>${i}</th>`;
+    awayTd += `<td>-</td>`;
+    homeTd += `<td>-</td>`;
+  }
+
+  $('#modal-content').innerHTML = `
+    <div class="detail-header">
+      <div style="font-size:12px;opacity:0.8">${esc(g.G_TM)} · ${esc(g.S_NM)}</div>
+      <div class="detail-teams">
+        <div><h3>${esc(g.AWAY_NM)}</h3></div>
+        <div class="detail-score">${esc(g.T_SCORE_CN)} : ${esc(g.B_SCORE_CN)}</div>
+        <div><h3>${esc(g.HOME_NM)}</h3></div>
+      </div>
+      <div style="font-size:13px;margin-top:10px">${esc(state(g))} ${esc(g.GAME_INN_NO)} ${esc(g.GAME_TB_SC_NM)}</div>
+    </div>
+
+    <h4 style="margin:20px 0 8px">이닝별 스코어</h4>
+    <table class="scoreboard-table">
+      <thead><tr><th>팀</th>${innTh}</tr></thead>
+      <tbody>
+        <tr><td><b>${esc(g.AWAY_NM)}</b></td>${awayTd}</tr>
+        <tr><td><b>${esc(g.HOME_NM)}</b></td>${homeTd}</tr>
+      </tbody>
+    </table>
+
+    <h4 style="margin:20px 0 8px">선발 투수 정보</h4>
+    <div style="background:#f9f9fb;padding:15px;border-radius:16px;font-size:13px;display:flex;justify-content:space-around">
+      <div><b>${esc(g.AWAY_NM)}:</b> ${esc(g.T_P_NM)}</div>
+      <div><b>${esc(g.HOME_NM)}:</b> ${esc(g.B_P_NM)}</div>
+    </div>
+  `;
+  $('#detail-modal').style.display = 'flex';
+}
+
+function closeModal(){ $('#detail-modal').style.display = 'none'; }
+
+async function load(){
+  try{
+    let r=await fetch("/api/kbo",{cache:"no-store"});
+    if(!r.ok)throw Error();
+    let j=await r.json();
+    globalGames = j.d||[];
+    $("#games").innerHTML=globalGames.length ? globalGames.map(card).join("") : '<div class="card empty">오늘 예정된 KBO 리그 경기가 없습니다.</div>';
+    $("#date").textContent=j.date+" · KBO 공식 데이터";
+    $("#status").textContent="실시간 연결 · "+new Date().toLocaleTimeString("ko-KR");
+  }catch(e){
+    $("#status").textContent="재연결 중";
+  }
+}
+load();setInterval(load,10000);
 </script></body></html>
