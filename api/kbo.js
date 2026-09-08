@@ -9,7 +9,6 @@ exports.handler = async function(event, context) {
     const day = String(now.getUTCDate()).padStart(2, '0');
     const dateStr = `${year}${month}${day}`;
 
-    // 네이버 KBO 일정/중계 API 연동
     const url = `https://sports.news.naver.com/kgame/scheduleList.nhn?category=kbo&date=${dateStr}`;
 
     const options = {
@@ -24,8 +23,29 @@ exports.handler = async function(event, context) {
       res.on('end', () => {
         try {
           const json = JSON.parse(rawData);
-          // 해당 날짜 경기 목록 추출
-          const games = json.gameScheduleList || [];
+          const rawGames = json.gameScheduleList || [];
+
+          // index.html에서 사용하는 필드명 구조로 정제
+          const games = rawGames.map(g => ({
+            G_TM: g.gtime || '18:30',
+            S_NM: g.stadium || '구장',
+            GAME_STATE_SC: g.gameStatusCode || g.statusCode || '',
+            CANCEL_SC_ID: g.cancel || false,
+            AWAY_NM: g.awayTeamName || g.aName || '원정',
+            HOME_NM: g.homeTeamName || g.hName || '홈',
+            T_SCORE_CN: g.awayTeamScore ?? g.aScore ?? '-',
+            B_SCORE_CN: g.homeTeamScore ?? g.hScore ?? '-',
+            GAME_INN_NO: g.currentInning || '',
+            GAME_TB_SC_NM: g.inningStatus || '',
+            T_P_NM: g.aStarter || '-',
+            B_P_NM: g.hStarter || '-',
+            T_PIT_P_NM: g.aPitcher || '-',
+            B_PIT_P_NM: g.hPitcher || '-',
+            BALL_CN: g.b || '-',
+            STRIKE_CN: g.s || '-',
+            OUT_CN: g.o || '-'
+          }));
+
           resolve({
             statusCode: 200,
             headers: {
@@ -45,7 +65,7 @@ exports.handler = async function(event, context) {
           });
         }
       });
-    }).on('error', (err) => {
+    }).on('error', () => {
       resolve({
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
