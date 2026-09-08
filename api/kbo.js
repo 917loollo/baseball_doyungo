@@ -1,37 +1,39 @@
+const https = require('https');
+
 exports.handler = async function(event, context) {
-  try {
-    const k = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const date = k.toISOString().slice(0, 10).replaceAll("-", "");
-    const r = await fetch("https://www.koreabaseball.com/ws/Main.asmx/GetKboGameList", {
-      method: "POST",
+  return new Promise((resolve, reject) => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+
+    const url = `https://m.sports.naver.com/game/kbo/${dateStr}/schedule`;
+
+    const options = {
       headers: {
-        "Content-Type": "application/json; charset=UTF-8",
-        "Referer": "https://www.koreabaseball.com/",
-        "User-Agent": "Mozilla/5.0"
-      },
-      body: JSON.stringify({ leId: "1", srId: "0", date })
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    };
+
+    https.get(url, options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        resolve({
+          statusCode: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          },
+          body: JSON.stringify({ message: "KBO API Connected", date: dateStr })
+        });
+      });
+    }).on('error', (err) => {
+      resolve({
+        statusCode: 500,
+        body: JSON.stringify({ error: err.message })
+      });
     });
-    if (!r.ok) throw Error("KBO HTTP " + r.status);
-    const p = JSON.parse(await r.text());
-    const d = Array.isArray(p?.d) ? p.d : Array.isArray(p) ? p : [];
-    
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "s-maxage=5, stale-while-revalidate=5",
-        "Access-Control-Allow-Origin": "*"
-      },
-      body: JSON.stringify({ date, d })
-    };
-  } catch (e) {
-    return {
-      statusCode: 502,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Access-Control-Allow-Origin": "*"
-      },
-      body: JSON.stringify({ error: e.message })
-    };
-  }
+  });
 };
