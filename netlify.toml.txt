@@ -1,0 +1,13 @@
+[build]
+  publish = "."
+  functions = "api"
+
+[[redirects]]
+  from = "/api/kbo"
+  to = "/.netlify/functions/kbo"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
